@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/lukasjarosch/go-docx"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/lukasjarosch/go-docx"
 )
 
 var verbose bool
@@ -31,8 +32,23 @@ func parseMarkdown(markdownFile string) map[string]string {
 
 		if strings.HasPrefix(line, "###") {
 			// Third-level heading
+			if verbose {
+				fmt.Println("Found heading: " + line)
+			}
 			heading := strings.TrimPrefix(line, "###")
-			key := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(heading), " ", "-"), "_", "-"))
+			key := strings.Map(func(r rune) rune {
+				if r == ' ' || r == '_' || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || ('0' <= r && r <= '9') || r == '-' {
+					return r
+				}
+				return -1
+			}, strings.ToLower(heading))
+			if verbose {
+				fmt.Println("Sanitized key: " + key)
+			}
+			key = strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(key), " ", "-"), "_", "-"))
+			if verbose {
+				fmt.Println("key to kebab case: " + key)
+			}
 			if currentPrefix != "" {
 				key = currentPrefix + "-" + key
 			}
@@ -47,7 +63,14 @@ func parseMarkdown(markdownFile string) map[string]string {
 			// Definition list item
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
-				key := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(previousLine), " ", "-"), "_", "-"))
+				// key := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(previousLine), " ", "-"), "_", "-"))
+				key := strings.Map(func(r rune) rune {
+					if r == ' ' || r == '_' || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || ('0' <= r && r <= '9') || r == '-' {
+						return r
+					}
+					return -1
+				}, strings.ToLower(previousLine))
+				key = strings.ReplaceAll(strings.ReplaceAll(string(key), " ", "-"), "_", "-")
 				value := strings.TrimSpace(parts[1])
 				if currentPrefix != "" {
 					key = currentPrefix + "-" + key
@@ -61,6 +84,13 @@ func parseMarkdown(markdownFile string) map[string]string {
 			}
 			currentKey = ""
 			currentValue = ""
+
+			currentPrefix = strings.Map(func(r rune) rune {
+				if r == ' ' || r == '_' || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || ('0' <= r && r <= '9') || r == '-' {
+					return r
+				}
+				return -1
+			}, strings.ToLower(line))
 			currentPrefix = strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(strings.TrimPrefix(line, "##")), " ", "-"), "_", "-"))
 		} else if currentKey != "" {
 			// Append line to current value
