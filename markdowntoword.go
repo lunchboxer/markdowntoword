@@ -6,11 +6,26 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/lukasjarosch/go-docx"
+	"golang.org/x/text/cases"
 )
 
 var verbose bool
+
+func sanitizeKey(s string) string {
+	// Use Unicode-aware case folding
+	caser := cases.Fold()
+	s = caser.String(s)
+
+	return strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) || r == ' ' || r == '_' || r == '-' {
+			return r
+		}
+		return -1
+	}, s)
+}
 
 func parseMarkdown(markdownFile string) map[string]string {
 	content, err := os.ReadFile(markdownFile)
@@ -36,12 +51,7 @@ func parseMarkdown(markdownFile string) map[string]string {
 				fmt.Println("Found heading: " + line)
 			}
 			heading := strings.TrimPrefix(line, "###")
-			key := strings.Map(func(r rune) rune {
-				if r == ' ' || r == '_' || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || ('0' <= r && r <= '9') || r == '-' {
-					return r
-				}
-				return -1
-			}, strings.ToLower(heading))
+			key := sanitizeKey(heading)
 			if verbose {
 				fmt.Println("Sanitized key: " + key)
 			}
@@ -63,13 +73,7 @@ func parseMarkdown(markdownFile string) map[string]string {
 			// Definition list item
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
-				// key := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(previousLine), " ", "-"), "_", "-"))
-				key := strings.Map(func(r rune) rune {
-					if r == ' ' || r == '_' || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || ('0' <= r && r <= '9') || r == '-' {
-						return r
-					}
-					return -1
-				}, strings.ToLower(previousLine))
+				key := sanitizeKey(previousLine)
 				key = strings.ReplaceAll(strings.ReplaceAll(string(key), " ", "-"), "_", "-")
 				value := strings.TrimSpace(parts[1])
 				if currentPrefix != "" {
@@ -85,12 +89,7 @@ func parseMarkdown(markdownFile string) map[string]string {
 			currentKey = ""
 			currentValue = ""
 
-			currentPrefix = strings.Map(func(r rune) rune {
-				if r == ' ' || r == '_' || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || ('0' <= r && r <= '9') || r == '-' {
-					return r
-				}
-				return -1
-			}, strings.ToLower(line))
+			currentPrefix = sanitizeKey(line)
 			currentPrefix = strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(strings.TrimPrefix(line, "##")), " ", "-"), "_", "-"))
 		} else if currentKey != "" {
 			// Append line to current value
@@ -128,9 +127,17 @@ func replaceMustacheTags(templateFile string, data map[string]string, outputFile
 		replaceMap[key] = value
 	}
 
+	for key, value := range replaceMap {
+		fmt.Printf("%s: %s\n", key, value)
+	}
+
 	err = doc.ReplaceAll(replaceMap)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error replacing placeholders: %v\n", err)
+	} else {
+		if verbose {
+			fmt.Println("Replacements completed successfully")
+		}
 	}
 
 	err = doc.WriteToFile(outputFile)
