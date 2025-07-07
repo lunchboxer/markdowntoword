@@ -124,18 +124,9 @@ func replaceMustacheTags(templateFile string, data map[string]string, outputFile
 
 	replaceMap := docx.PlaceholderMap{}
 	for key, value := range data {
-		// Handle bold (**) and italic (*) formatting with proper Word styles
-		replaceMap[key] = docx.PlaceholderStyle{
-			Text:   value,
-			Bold:   strings.Count(value, "**")%2 == 0,  // Only set bold if even number of **
-			Italic: strings.Count(value, "*")%2 == 0,   // Only set italic if even number of *
-		}
-		// Remove the markdown formatting characters
-		replaceMap[key] = docx.PlaceholderStyle{
-			Text:   strings.ReplaceAll(strings.ReplaceAll(value, "**", ""), "*", ""),
-			Bold:   strings.Count(value, "**") >= 2,
-			Italic: strings.Count(value, "*") >= 2 && strings.Count(value, "**") == 0,
-		}
+		// Remove markdown formatting characters
+		cleanValue := strings.ReplaceAll(strings.ReplaceAll(value, "**", ""), "*", "")
+		replaceMap[key] = cleanValue
 	}
 
 	for key, value := range replaceMap {
