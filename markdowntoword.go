@@ -147,6 +147,9 @@ func replaceMustacheTags(templateFile string, data map[string]string, outputFile
 }
 
 func processValue(value string) string {
+	value = replaceMarkdownFormatting(value, "**", "bold")
+	value = replaceMarkdownFormatting(value, "*", "italic")
+
 	listItems := strings.Split(value, "\n")
 	var bulletPoints []string
 	for _, item := range listItems {
@@ -156,6 +159,19 @@ func processValue(value string) string {
 		bulletPoints = append(bulletPoints, item)
 	}
 	return strings.Join(bulletPoints, "\n")
+}
+
+func replaceMarkdownFormatting(value, delimiter, style string) string {
+	parts := strings.Split(value, delimiter)
+	for i := 1; i < len(parts); i += 2 {
+		switch style {
+		case "bold":
+			parts[i] = "<b>" + parts[i] + "</b>"
+		case "italic":
+			parts[i] = "<i>" + parts[i] + "</i>"
+		}
+	}
+	return strings.Join(parts, "")
 }
 
 func main() {
