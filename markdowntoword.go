@@ -175,11 +175,30 @@ func replaceMarkdownFormatting(value, delimiter, style string) string {
 }
 
 func main() {
-	markdownFile := flag.String("markdown", "", "Path to the markdown file")
-	templateFile := flag.String("template", "", "Path to the Word document template")
-	outputFile := flag.String("output", "", "Path to the output Word document (optional)")
-	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s -markdown INPUT.md -template TEMPLATE.docx [options]\n", os.Args[0])
+		fmt.Fprintln(flag.CommandLine.Output(), "\nConverts markdown documentation to Word document using a template")
+		fmt.Fprintln(flag.CommandLine.Output(), "\nRequired flags:")
+		flag.PrintDefaults()
+		fmt.Fprintln(flag.CommandLine.Output(), "\nExamples:")
+		fmt.Fprintln(flag.CommandLine.Output(), "  Generate document with default output name:")
+		fmt.Fprintf(flag.CommandLine.Output(), "  %s -markdown spec.md -template template.docx\n", os.Args[0])
+		fmt.Fprintln(flag.CommandLine.Output(), "  Generate document with custom output name:")
+		fmt.Fprintf(flag.CommandLine.Output(), "  %s -markdown spec.md -template template.docx -output final.docx\n", os.Args[0])
+	}
+
+	var helpFlag bool
+	markdownFile := flag.String("markdown", "", "Input markdown file containing documentation content (required)")
+	templateFile := flag.String("template", "", "Input Word template document with {{placeholders}} (required)")
+	outputFile := flag.String("output", "", "Output Word document filename (default: input name with .docx extension)")
+	flag.BoolVar(&verbose, "v", false, "Enable verbose debugging output")
+	flag.BoolVar(&helpFlag, "h", false, "Show this help message")
 	flag.Parse()
+
+	if helpFlag {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	// Check if required arguments are provided
 	if *markdownFile == "" {
