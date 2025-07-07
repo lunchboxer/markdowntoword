@@ -200,14 +200,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Check if required arguments are provided
-	if *markdownFile == "" {
-		fmt.Println("Error: Markdown file path is required")
-		return
-	}
-	if *templateFile == "" {
-		fmt.Println("Error: Template file path is required")
-		return
+	// Check required arguments or show help
+	if *markdownFile == "" || *templateFile == "" {
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	// Set default output file path if not provided
