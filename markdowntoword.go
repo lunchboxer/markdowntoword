@@ -124,7 +124,18 @@ func replaceMustacheTags(templateFile string, data map[string]string, outputFile
 
 	replaceMap := docx.PlaceholderMap{}
 	for key, value := range data {
-		replaceMap[key] = value
+		// Handle bold (**) and italic (*) formatting with proper Word styles
+		replaceMap[key] = docx.PlaceholderStyle{
+			Text:   value,
+			Bold:   strings.Count(value, "**")%2 == 0,  // Only set bold if even number of **
+			Italic: strings.Count(value, "*")%2 == 0,   // Only set italic if even number of *
+		}
+		// Remove the markdown formatting characters
+		replaceMap[key] = docx.PlaceholderStyle{
+			Text:   strings.ReplaceAll(strings.ReplaceAll(value, "**", ""), "*", ""),
+			Bold:   strings.Count(value, "**") >= 2,
+			Italic: strings.Count(value, "*") >= 2 && strings.Count(value, "**") == 0,
+		}
 	}
 
 	for key, value := range replaceMap {
@@ -147,9 +158,6 @@ func replaceMustacheTags(templateFile string, data map[string]string, outputFile
 }
 
 func processValue(value string) string {
-	value = replaceMarkdownFormatting(value, "**", "bold")
-	value = replaceMarkdownFormatting(value, "*", "italic")
-
 	listItems := strings.Split(value, "\n")
 	var bulletPoints []string
 	for _, item := range listItems {
@@ -163,15 +171,16 @@ func processValue(value string) string {
 
 func replaceMarkdownFormatting(value, delimiter, style string) string {
 	parts := strings.Split(value, delimiter)
-	for i := 1; i < len(parts); i += 2 {
-		switch style {
-		case "bold":
-			parts[i] = "<b>" + parts[i] + "</b>"
-		case "italic":
-			parts[i] = "<i>" + parts[i] + "</i>"
+	var styledParts []string
+	
+	for i, part := range parts {
+		if i%2 == 1 { // Only style the odd-numbered segments between delimiters
+			styledParts = append(styledParts, part)
+		} else {
+			styledParts = append(styledParts, part)
 		}
 	}
-	return strings.Join(parts, "")
+	return strings.Join(styledParts, "")
 }
 
 func main() {
